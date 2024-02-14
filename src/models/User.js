@@ -16,7 +16,7 @@ const userSchema = new mongoose.Schema(
     deleted: { type: Boolean, default: false },
     lastLogin: { type: Date, default: Date.now },
   },
-  { versionKey: false }
+  { versionKey: false, timestamps: true }
 );
 
 module.exports = {

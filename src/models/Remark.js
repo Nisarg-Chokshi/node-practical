@@ -10,7 +10,7 @@ const remarkSchema = new mongoose.Schema(
     content: { type: String },
     status: { type: String, enum: Object.values(REMARK), default: 'Pending' },
   },
-  { versionKey: false }
+  { versionKey: false, timestamps: true }
 );
 
 module.exports = {

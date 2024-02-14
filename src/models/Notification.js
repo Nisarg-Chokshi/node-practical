@@ -10,7 +10,7 @@ const notificationSchema = mongoose.Schema(
     type: { type: String },
     notificationStatus: { type: String, default: 'Unread' },
   },
-  { versionKey: false }
+  { versionKey: false, timestamps: true }
 );
 
 module.exports = {

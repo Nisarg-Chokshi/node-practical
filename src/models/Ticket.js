@@ -16,7 +16,7 @@ const ticketSchema = new mongoose.Schema(
     status: { type: String, enum: TICKET_STATUS, default: 'Pending' },
     history: { type: [ObjectId], required: false, default: [] },
   },
-  { versionKey: false }
+  { versionKey: false, timestamps: true }
 );
 
 module.exports = {
