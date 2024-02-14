@@ -54,7 +54,7 @@ module.exports = {
 
       const emailExists = await Users.findOne({ email });
       if (emailExists) {
-        console.log('Resource already exists with same email');
+        console.log('userRegistration | User with same email already exists');
         res.render('register', { errorMessage: MESSAGE.RESOURCE_EXISTS });
       }
 
@@ -93,7 +93,7 @@ module.exports = {
 
       res.render('dashboard', { userData });
     } catch (error) {
-      console.log('Internal Error =>', error);
+      console.log('userRegistration | Internal Error =>', error);
       res.render('register', {
         errorMessage: MESSAGE.SOMETHING_WENT_WRONG,
       });
@@ -104,7 +104,7 @@ module.exports = {
       const { email, password } = req.body;
       const userData = await Users.findOne({ email, deleted: false }).lean();
       if (!userData) {
-        console.log('User not found');
+        console.log('userLogin | User not found');
         res.render('login', { errorMessage: MESSAGE.RESOURCE_NOT_FOUND });
       } else {
         const isPasswordMatched = bcrypt.compareSync(
@@ -113,7 +113,7 @@ module.exports = {
         );
 
         if (!isPasswordMatched) {
-          console.log('Incorrect Password');
+          console.log('userLogin | Incorrect Password');
           res.render('login', { errorMessage: MESSAGE.INVALID_LOGIN });
         } else {
           await Users.findByIdAndUpdate(userData._id, {
@@ -139,7 +139,7 @@ module.exports = {
         }
       }
     } catch (error) {
-      console.log('Internal Error =>', error);
+      console.log('userLogin | Internal Error =>', error);
       res.render('login', { errorMessage: MESSAGE.SOMETHING_WENT_WRONG });
     }
   },
@@ -156,7 +156,7 @@ module.exports = {
       const userData = await Users.findOne({ email, deleted: false }).lean();
 
       if (!userData) {
-        console.log('User not found');
+        console.log('changePassword | User not found');
         res.render('changePassword', {
           errorMessage: MESSAGE.RESOURCE_NOT_FOUND,
         });
@@ -167,7 +167,7 @@ module.exports = {
         );
 
         if (!isPasswordMatched) {
-          console.log('Incorrect Old Password');
+          console.log('changePassword | Incorrect Old Password');
           res.render('changePassword', {
             errorMessage: MESSAGE.INVALID_LOGIN,
           });
@@ -183,7 +183,7 @@ module.exports = {
         }
       }
     } catch (error) {
-      console.log('Internal Error =>', error);
+      console.log('changePassword | Internal Error =>', error);
       res.render('changePassword', {
         errorMessage: MESSAGE.SOMETHING_WENT_WRONG,
       });
@@ -195,7 +195,7 @@ module.exports = {
       const userData = await Users.findOne({ email, deleted: false });
 
       if (!userData) {
-        console.log('User not found');
+        console.log('resetPassword | User not found');
         res.render('resetPassword', {
           errorMessage: MESSAGE.RESOURCE_NOT_FOUND,
         });
@@ -207,7 +207,7 @@ module.exports = {
         });
       }
     } catch (error) {
-      console.log('Internal Error =>', error);
+      console.log('resetPassword | Internal Error =>', error);
       res.render('resetPassword', {
         errorMessage: MESSAGE.SOMETHING_WENT_WRONG,
       });
@@ -219,7 +219,7 @@ module.exports = {
 
       const userExists = await Users.findById({ _id }).lean();
       if (!userExists) {
-        console.log('User not found');
+        console.log('getAllTickets | User not found');
         res.render('viewTickets', { errorMessage: MESSAGE.RESOURCE_NOT_FOUND });
       }
 
@@ -250,7 +250,7 @@ module.exports = {
 
       res.render('viewTickets', { ticketData });
     } catch (error) {
-      console.log('Internal Error =>', error);
+      console.log('getAllTickets | Internal Error =>', error);
       res.render('createTicket', {
         errorMessage: MESSAGE.SOMETHING_WENT_WRONG,
       });
@@ -263,14 +263,14 @@ module.exports = {
 
       const userExists = await Users.findById({ _id: generatedBy });
       if (!userExists) {
-        console.log('User not found');
+        console.log('ticketCreation | User not found');
         res.render('createTicket', {
           errorMessage: MESSAGE.RESOURCE_NOT_FOUND,
         });
       }
 
       if (req.user.role !== 'Client') {
-        console.log(req.user.role, 'can not create tickets');
+        console.log('ticketCreation', req.user.role, 'can not create tickets');
         res.render('createTicket', { errorMessage: MESSAGE.UNAUTHORIZED });
       }
 
@@ -285,7 +285,7 @@ module.exports = {
       const ticketData = await Tickets.find({}).lean();
       res.render('viewTickets', { ticketData });
     } catch (error) {
-      console.log('Internal Error =>', error);
+      console.log('ticketCreation | Internal Error =>', error);
       res.render('createTicket', {
         errorMessage: MESSAGE.SOMETHING_WENT_WRONG,
       });
