@@ -36,6 +36,31 @@ const fetchTicketsBasedOnRoles = async (role) => {
   return ticketData;
 };
 
+const getNewTicketStatus = async (role, operation) => {
+  let ticketStatus;
+  if (role === USER_ROLES.EMPLOYEE)
+    ticketStatus =
+      operation === 'accept'
+        ? TICKET_STATUS.APPROVED_BY_EMPLOYEE
+        : TICKET_STATUS.PENDING;
+  if (role === USER_ROLES.MANAGER)
+    ticketStatus =
+      operation === 'accept'
+        ? TICKET_STATUS.APPROVED_BY_MANAGER
+        : TICKET_STATUS.REJECTED_BY_MANAGER;
+  if (role === USER_ROLES.ADMIN)
+    ticketStatus =
+      operation === 'accept'
+        ? TICKET_STATUS.APPROVED_BY_ADMIN
+        : TICKET_STATUS.REJECTED_BY_ADMIN;
+  if (role === USER_ROLES.CLIENT)
+    ticketStatus =
+      operation === 'accept'
+        ? TICKET_STATUS.APPROVED_BY_CLIENT
+        : TICKET_STATUS.REJECTED_BY_CLIENT;
+  return ticketStatus;
+};
+
 module.exports = {
   isUserLoggedIn: async (req, res, next) => {
     const token = req.cookies.appSession;
@@ -288,6 +313,60 @@ module.exports = {
       res.render('createTicket', {
         errorMessage: MESSAGE.SOMETHING_WENT_WRONG,
       });
+    }
+  },
+  acceptTicket: async (req, res) => {
+    try {
+      const { id, remarks } = req.body;
+      const ticket = await Tickets.findById({ _id: id });
+      if (!ticket) {
+        console.log('acceptTicket | Ticket not found');
+        res.render('viewTickets', { errorMessage: MESSAGE.RESOURCE_NOT_FOUND });
+      } else {
+        const userData = await Users.findById({ _id: req.user._id }).lean();
+        if (!userData) {
+          console.log('acceptTicket | User not found');
+          res.render('viewTickets', {
+            errorMessage: MESSAGE.RESOURCE_NOT_FOUND,
+          });
+        } else {
+          ticket.status = getNewTicketStatus(userData.role, 'accept');
+          ticket.remarks = remarks;
+          await ticket.save();
+          const ticketData = await fetchTicketsBasedOnRoles(userData.role);
+          res.render('viewTickets', { userData: req.user, ticketData });
+        }
+      }
+    } catch (error) {
+      console.log('acceptTicket | Internal Error =>', error);
+      res.render('viewTickets', { errorMessage: MESSAGE.SOMETHING_WENT_WRONG });
+    }
+  },
+  rejectTicket: async (req, res) => {
+    try {
+      const { id, remarks } = req.body;
+      const ticket = await Tickets.findById({ _id: id });
+      if (!ticket) {
+        console.log('rejectTicket | Ticket not found');
+        res.render('viewTickets', { errorMessage: MESSAGE.RESOURCE_NOT_FOUND });
+      } else {
+        const userData = await Users.findById({ _id: req.user._id }).lean();
+        if (!userData) {
+          console.log('rejectTicket | User not found');
+          res.render('viewTickets', {
+            errorMessage: MESSAGE.RESOURCE_NOT_FOUND,
+          });
+        } else {
+          ticket.status = getNewTicketStatus(userData.role, 'reject');
+          ticket.remarks = remarks;
+          await ticket.save();
+          const ticketData = await fetchTicketsBasedOnRoles(userData.role);
+          res.render('viewTickets', { userData: req.user, ticketData });
+        }
+      }
+    } catch (error) {
+      console.log('rejectTicket | Internal Error =>', error);
+      res.render('viewTickets', { errorMessage: MESSAGE.SOMETHING_WENT_WRONG });
     }
   },
 };

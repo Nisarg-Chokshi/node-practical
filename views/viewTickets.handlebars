@@ -72,7 +72,12 @@
                     <td>{{increment @index}}</td>
                     <td>{{nestedProperty (nestedProperty this 'content') 'title'}}</td>
                     <td>{{nestedProperty this 'status'}}</td>
-                    <td>Actions</td>
+                    <td>
+                        <button>Accept</button>
+                        {{!-- <button onclick="acceptRecord('{{this._id}}')">Accept</button> --}}
+                        <button>Reject</button>
+                        {{!-- <button onclick="rejectRecord('{{this._id}}')">Reject</button> --}}
+                    </td>
                     <td>{{formatTimestamp (nestedProperty this 'updatedAt')}}</td>
                 </tr>
                 {{/each}}
@@ -84,6 +89,34 @@
         {{/if}}
 
     </div>
+
+    <script>
+        <script>
+            function acceptRecord(id) {
+                fetch(`/api/accept/${id}`, { method: 'POST' })
+                    .then(response => {
+                        if (response.ok) {
+                        } else {
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+        }
+
+            function rejectRecord(id) {
+                fetch(`/api/reject/${id}`, { method: 'POST' })
+                    .then(response => {
+                        if (response.ok) {
+                        } else {
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+        }
+    </script>
+    </script>
 
     <script src='https://code.jquery.com/jquery-3.2.1.slim.min.js'
         integrity='sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN'

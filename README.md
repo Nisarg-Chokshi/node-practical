@@ -1,6 +1,6 @@
 # Node Practical ToDo List
 
-# Requirements:
+### Requirements:
 - [ ] Create registration and login api with JWT and integrate it in form using template rendering
 - [ ] 4 user role - admin, manager, employee, client
 - [ ] Client can create tickets with text, images or video content.
@@ -11,7 +11,7 @@
 - [ ] If the ticket is approved by admin then the client will be notified for the same.
 - [ ] Admin should be able to view all the stages of the ticket.
 
-# Snapshots:
+### Snapshots:
 ![Client Dashboard](./public/assets/ClientDashboard.jpg "Client Dashboard")
 ![Employee/Manager/Admin Dashboard](./public/assets/Dashboard.jpg "Employee/Manager/Admin Dashboard")
 ![Create Ticket](./public/assets/CreateTicket.jpg "Create Ticket")

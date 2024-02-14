@@ -11,13 +11,15 @@ const {
   userLogout,
   isUserLoggedIn,
   ticketCreation,
-  getAllTickets,
+  acceptTicket,
+  rejectTicket,
 } = require('../controllers/User/user.controller');
+
 const {
   registerSchema,
   loginSchema,
-  generateTicketSchema,
 } = require('../controllers/User/user.validator');
+
 const { USER_ROLES } = require('../helpers/constants');
 
 const router = express.Router();
@@ -30,6 +32,10 @@ router.post('/api/register', validatePayload(registerSchema), userRegistration);
 router.post('/api/login', validatePayload(loginSchema), userLogin);
 
 router.post('/api/createTicket', isUserLoggedIn, ticketCreation);
+
+router.post('/api/acceptTicket', isUserLoggedIn, acceptTicket);
+
+router.post('/api/rejectTicket', isUserLoggedIn, rejectTicket);
 
 // ------------------------------
 //        Rendering Views
