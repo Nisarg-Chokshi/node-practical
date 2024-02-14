@@ -11,6 +11,31 @@ const {
 } = require('../../helpers/constants');
 const { Tickets } = require('../../models/Ticket');
 
+const fetchTicketsBasedOnRoles = async (role) => {
+  let ticketData = [];
+  if (role === USER_ROLES.EMPLOYEE) {
+    ticketData = await Tickets.find({
+      status: {
+        $in: [TICKET_STATUS.PENDING, TICKET_STATUS.REJECTED_BY_MANAGER],
+      },
+    });
+  } else if (role === USER_ROLES.MANAGER) {
+    ticketData = await Tickets.find({
+      status: {
+        $in: [
+          TICKET_STATUS.PENDING,
+          TICKET_STATUS.APPROVED_BY_EMPLOYEE,
+          TICKET_STATUS.REJECTED_BY_MANAGER,
+          TICKET_STATUS.REJECTED_BY_ADMIN,
+        ],
+      },
+    });
+  } else if (role === USER_ROLES.ADMIN || role === USER_ROLES.CLIENT) {
+    ticketData = await Tickets.find({});
+  }
+  return ticketData;
+};
+
 module.exports = {
   isUserLoggedIn: async (req, res, next) => {
     const token = req.cookies.appSession;
@@ -20,23 +45,20 @@ module.exports = {
         const { id, role } = decoded;
 
         const userData = await Users.findOne({ _id: id, role });
-        if (!userData) {
-          console.log('User Not found');
-          return next();
-          // res.render('login', { errorMessage: MESSAGE.RESOURCE_NOT_FOUND });
-        }
+        if (!userData) return next();
 
+        delete userData.password;
         req.user = userData;
+
+        const ticketData = await fetchTicketsBasedOnRoles(userData.role);
+        req.ticketData = ticketData;
+
         return next();
       } catch (error) {
-        console.log('Error in auth =>', error);
         return next();
-        // res.render('login');
       }
-    } else {
-      next();
-      // res.render('login');
     }
+    next();
   },
   userRegistration: async (req, res) => {
     try {
@@ -55,7 +77,7 @@ module.exports = {
       const emailExists = await Users.findOne({ email });
       if (emailExists) {
         console.log('userRegistration | User with same email already exists');
-        res.render('register', { errorMessage: MESSAGE.RESOURCE_EXISTS });
+        res.redirect('/register');
       }
 
       const passwordHash = bcrypt.hashSync(password, SALT_ROUNDS);
@@ -91,7 +113,7 @@ module.exports = {
 
       delete userData.password;
 
-      res.render('dashboard', { userData });
+      res.redirect('/');
     } catch (error) {
       console.log('userRegistration | Internal Error =>', error);
       res.render('register', {
@@ -223,32 +245,9 @@ module.exports = {
         res.render('viewTickets', { errorMessage: MESSAGE.RESOURCE_NOT_FOUND });
       }
 
-      let ticketData = [];
-
-      if (userExists.role === USER_ROLES.EMPLOYEE) {
-        ticketData = await Tickets.find({
-          status: {
-            $in: [TICKET_STATUS.PENDING, TICKET_STATUS.REJECTED_BY_MANAGER],
-          },
-        });
-      } else if (userExists.role === USER_ROLES.MANAGER) {
-        ticketData = await Tickets.find({
-          status: {
-            $in: [
-              TICKET_STATUS.APPROVED_BY_EMPLOYEE,
-              TICKET_STATUS.REJECTED_BY_ADMIN,
-            ],
-          },
-        });
-      } else if (userExists.role === USER_ROLES.ADMIN) {
-        ticketData = await Tickets.find({});
-      } else if (userExists.role === USER_ROLES.CLIENT) {
-        ticketData = await Tickets.find({
-          status: TICKET_STATUS.APPROVED_BY_ADMIN,
-        });
-      }
-
-      res.render('viewTickets', { ticketData });
+      const ticketData = await fetchTicketsBasedOnRoles(userExists.role);
+      delete userExists.password;
+      res.render('viewTickets', { userData: userExists, ticketData });
     } catch (error) {
       console.log('getAllTickets | Internal Error =>', error);
       res.render('createTicket', {
@@ -282,8 +281,8 @@ module.exports = {
         history: [],
       });
 
-      const ticketData = await Tickets.find({}).lean();
-      res.render('viewTickets', { ticketData });
+      const ticketData = await fetchTicketsBasedOnRoles(userExists.role);
+      res.render('viewTickets', { userData: req.user, ticketData });
     } catch (error) {
       console.log('ticketCreation | Internal Error =>', error);
       res.render('createTicket', {
