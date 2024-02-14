@@ -32,7 +32,12 @@ const hbs = expressHandleBars.create({
       if (value1 === value2) return options.fn(this);
       else return options.inverse(this);
     },
+    nestedProperty: (object, property) => {
+      return object[property];
+    },
     json: (value, options) => JSON.stringify(value),
+    increment: (value) => value + 1,
+    formatTimestamp: (value) => new Date(value).toString().slice(4, 24),
   },
 });
 app.engine('handlebars', hbs.engine);
