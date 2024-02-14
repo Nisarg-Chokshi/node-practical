@@ -22,39 +22,57 @@ const { USER_ROLES } = require('../helpers/constants');
 
 const router = express.Router();
 
+// ------------------------------
+//      API Calls
+// ------------------------------
+router.post('/api/register', validatePayload(registerSchema), userRegistration);
+
+router.post('/api/login', validatePayload(loginSchema), userLogin);
+
+router.post('/api/createTicket', isUserLoggedIn, ticketCreation);
+
+// ------------------------------
+//        Rendering Views
+// ------------------------------
+
 router.get('/', isUserLoggedIn, (req, res) => {
-  res.render('dashboard', { userData: req.user });
+  console.log('/ | req.user =>', req.user);
+  if (req.user) res.render('dashboard', { userData: req.user });
+  else res.render('dashboard');
 });
 
-router.get('/register', (req, res) => {
-  res.render('register');
+router.get('/register', isUserLoggedIn, (req, res) => {
+  if (req.url !== '/register') res.redirect('/register');
+  console.log('/register | req.user =>', req.user);
+  if (req.user) res.redirect('/');
+  else res.render('register');
 });
 
-router.get('/login', (req, res) => {
-  res.render('login');
+router.get('/login', isUserLoggedIn, (req, res) => {
+  console.log('/login | req.user =>', req.user);
+  if (req.user) res.render('/');
+  else res.render('login');
 });
 
 router.get('/logout', userLogout);
 
 router.get('/viewTickets', isUserLoggedIn, async (req, res) => {
-  const ticketData = await getAllTickets(req, res);
-  res.render('viewTickets', { ticketData });
+  console.log('/viewTickets | req.user =>', req.user);
+  res.render('viewTickets', { userData: req.user, ticketData: req.ticketData });
 });
-
-router.post('/api/register', validatePayload(registerSchema), userRegistration);
-
-router.post('/api/login', validatePayload(loginSchema), userLogin);
 
 router.get(
   '/createTicket',
   isUserLoggedIn,
   checkRole(USER_ROLES.CLIENT),
   (req, res) => {
-    res.render('createTicket');
+    console.log('/createTicket | req.user =>', req.user);
+    res.render('createTicket', { userData: req.user });
   }
 );
 
-// router.post('/api/createTicket', validatePayload(generateTicketSchema), ticketCreation);
-router.post('/api/createTicket', isUserLoggedIn, ticketCreation);
+router.get('/*', isUserLoggedIn, (req, res) => {
+  res.redirect('/');
+});
 
 module.exports = router;
