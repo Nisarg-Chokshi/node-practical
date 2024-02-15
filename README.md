@@ -15,6 +15,7 @@
 ![Client Dashboard](./public/assets/ClientDashboard.jpg "Client Dashboard")
 ![Employee/Manager/Admin Dashboard](./public/assets/Dashboard.jpg "Employee/Manager/Admin Dashboard")
 ![Create Ticket](./public/assets/CreateTicket.jpg "Create Ticket")
+![View Tickets](./public/assets/ViewTickets.jpg "View Tickets")
 ![User Login](./public/assets/UserLogin.jpg "User Login")
 ![User Registration](./public/assets/UserRegistration.jpg "User Registration")
 ![Landing Page](./public/assets/LandingPage.jpg "Landing Page")
