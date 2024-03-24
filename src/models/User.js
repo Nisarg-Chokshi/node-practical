@@ -8,17 +8,18 @@ const userSchema = new mongoose.Schema(
     userName: { type: String, required: true },
     email: { type: String, lowercase: true, unique: true, required: true },
     password: { type: String, required: true },
+    gender: { type: String, required: true },
     contactNumber: { type: String, default: '' },
     profilePic: { type: String, default: '' },
     verifyToken: { type: String, default: '' },
     isVerified: { type: Boolean, default: false },
     role: { type: String, enum: Object.values(USER_ROLES), required: true },
     deleted: { type: Boolean, default: false },
-    lastLogin: { type: Date, default: Date.now },
+    lastLogin: { type: Date },
   },
   { versionKey: false, timestamps: true }
 );
 
 module.exports = {
-  Users: mongoose.model('User', userSchema),
+  Users: mongoose.model('User', userSchema, 'users'),
 };

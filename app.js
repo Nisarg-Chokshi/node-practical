@@ -3,12 +3,11 @@ const cors = require('cors');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const { rateLimit } = require('express-rate-limit');
-const expressHandleBars = require('express-handlebars');
 
 require('dotenv').config();
 
-const { dbConnection } = require('./src/config/dbConnection');
-const publicRoutes = require('./src/routes/public');
+const { dbConnection, addDocuments } = require('./src/config/dbConnection');
+const routes = require('./src/routes/routes');
 
 const app = express();
 app.use(
@@ -25,28 +24,9 @@ app.use(express.json({ limit: '100MB' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cors({ credentials: true, origin: true }));
 
-app.use(express.static('public'));
-const hbs = expressHandleBars.create({
-  helpers: {
-    isEqual: (value1, value2, options) => {
-      if (value1 === value2) return options.fn(this);
-      else return options.inverse(this);
-    },
-    nestedProperty: (object, property) => {
-      return object[property];
-    },
-    json: (value, options) => JSON.stringify(value),
-    increment: (value) => value + 1,
-    formatTimestamp: (value) => new Date(value).toString().slice(4, 24),
-  },
-});
-app.engine('handlebars', hbs.engine);
-app.set('view engine', 'handlebars');
-app.set('views', './views');
-app.enable('view cache');
-
-app.use('/', publicRoutes);
+app.use('/', routes);
 
 dbConnection();
+// addDocuments();
 
 module.exports = app;

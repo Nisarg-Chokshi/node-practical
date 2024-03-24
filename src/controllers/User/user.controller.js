@@ -3,63 +3,8 @@ const jsonwebtoken = require('jsonwebtoken');
 require('dotenv').config();
 
 const { Users } = require('../../models/User');
-const {
-  MESSAGE,
-  SALT_ROUNDS,
-  USER_ROLES,
-  TICKET_STATUS,
-} = require('../../helpers/constants');
-const { Tickets } = require('../../models/Ticket');
-
-const fetchTicketsBasedOnRoles = async (role) => {
-  let ticketData = [];
-  if (role === USER_ROLES.EMPLOYEE) {
-    ticketData = await Tickets.find({
-      status: {
-        $in: [TICKET_STATUS.PENDING, TICKET_STATUS.REJECTED_BY_MANAGER],
-      },
-    });
-  } else if (role === USER_ROLES.MANAGER) {
-    ticketData = await Tickets.find({
-      status: {
-        $in: [
-          TICKET_STATUS.PENDING,
-          TICKET_STATUS.APPROVED_BY_EMPLOYEE,
-          TICKET_STATUS.REJECTED_BY_MANAGER,
-          TICKET_STATUS.REJECTED_BY_ADMIN,
-        ],
-      },
-    });
-  } else if (role === USER_ROLES.ADMIN || role === USER_ROLES.CLIENT) {
-    ticketData = await Tickets.find({});
-  }
-  return ticketData;
-};
-
-const getNewTicketStatus = async (role, operation) => {
-  let ticketStatus;
-  if (role === USER_ROLES.EMPLOYEE)
-    ticketStatus =
-      operation === 'accept'
-        ? TICKET_STATUS.APPROVED_BY_EMPLOYEE
-        : TICKET_STATUS.PENDING;
-  if (role === USER_ROLES.MANAGER)
-    ticketStatus =
-      operation === 'accept'
-        ? TICKET_STATUS.APPROVED_BY_MANAGER
-        : TICKET_STATUS.REJECTED_BY_MANAGER;
-  if (role === USER_ROLES.ADMIN)
-    ticketStatus =
-      operation === 'accept'
-        ? TICKET_STATUS.APPROVED_BY_ADMIN
-        : TICKET_STATUS.REJECTED_BY_ADMIN;
-  if (role === USER_ROLES.CLIENT)
-    ticketStatus =
-      operation === 'accept'
-        ? TICKET_STATUS.APPROVED_BY_CLIENT
-        : TICKET_STATUS.REJECTED_BY_CLIENT;
-  return ticketStatus;
-};
+const { MESSAGE, SALT_ROUNDS, USER_ROLES } = require('../../helpers/constants');
+const { successResponse, errorResponse } = require('../../helpers/functions');
 
 module.exports = {
   isUserLoggedIn: async (req, res, next) => {
@@ -69,21 +14,43 @@ module.exports = {
         const decoded = jsonwebtoken.verify(token, process.env.SECRET);
         const { id, role } = decoded;
 
-        const userData = await Users.findOne({ _id: id, role });
-        if (!userData) return next();
+        const userData = await Users.findOne(
+          { _id: id, role },
+          { password: 0 }
+        ).lean();
+        if (!userData) return errorResponse(res, 401, MESSAGE.UNAUTHORIZED);
 
-        delete userData.password;
         req.user = userData;
-
-        const ticketData = await fetchTicketsBasedOnRoles(userData.role);
-        req.ticketData = ticketData;
 
         return next();
       } catch (error) {
-        return next();
+        return errorResponse(res, 500, MESSAGE.SOMETHING_WENT_WRONG);
       }
+    } else {
+      return errorResponse(res, 401, MESSAGE.UNAUTHORIZED);
     }
-    next();
+  },
+  getAllUsers: async (req, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== USER_ROLES.ADMIN)
+        return errorResponse(res, 403, MESSAGE.PERMISSON_DENIED);
+
+      const userList = await Users.find(
+        { role: USER_ROLES.USER },
+        { password: 0 }
+      ).lean();
+
+      return successResponse(
+        res,
+        userList.length > 0 ? 200 : 204,
+        MESSAGE.RESOURCE_RETRIEVED,
+        userList
+      );
+    } catch (error) {
+      console.log('userRegistration | Internal Error =>', error);
+      return errorResponse(res, 500, MESSAGE.SOMETHING_WENT_WRONG);
+    }
   },
   userRegistration: async (req, res) => {
     try {
@@ -91,18 +58,16 @@ module.exports = {
         userName,
         email,
         password,
+        gender,
+        role,
         contactNumber,
         profilePic,
-        verifyToken,
-        isVerified,
-        role,
-        lastLogin,
       } = req.body;
 
-      const emailExists = await Users.findOne({ email });
+      const emailExists = await Users.findOne({ email }).lean();
       if (emailExists) {
         console.log('userRegistration | User with same email already exists');
-        res.redirect('/register');
+        return errorResponse(res, 400, MESSAGE.RESOURCE_EXISTS);
       }
 
       const passwordHash = bcrypt.hashSync(password, SALT_ROUNDS);
@@ -111,11 +76,11 @@ module.exports = {
         userName,
         email,
         password: passwordHash,
+        gender,
+        role,
         contactNumber: contactNumber || '',
         profilePic: profilePic || '',
-        verifyToken: verifyToken || '',
         isVerified: false,
-        role,
         deleted: false,
       });
 
@@ -124,7 +89,7 @@ module.exports = {
       }).lean();
 
       const token = jsonwebtoken.sign(
-        { id: userData._id, role: userData.role },
+        { id: userData._id, role },
         process.env.SECRET,
         { expiresIn: process.env.TOKEN_VALIDITY }
       );
@@ -137,13 +102,10 @@ module.exports = {
       });
 
       delete userData.password;
-
-      res.redirect('/');
+      return successResponse(res, 201, MESSAGE.RESOURCE_CREATED, userData);
     } catch (error) {
       console.log('userRegistration | Internal Error =>', error);
-      res.render('register', {
-        errorMessage: MESSAGE.SOMETHING_WENT_WRONG,
-      });
+      return errorResponse(res, 500, MESSAGE.SOMETHING_WENT_WRONG);
     }
   },
   userLogin: async (req, res) => {
@@ -152,7 +114,7 @@ module.exports = {
       const userData = await Users.findOne({ email, deleted: false }).lean();
       if (!userData) {
         console.log('userLogin | User not found');
-        res.render('login', { errorMessage: MESSAGE.RESOURCE_NOT_FOUND });
+        return errorResponse(res, 404, MESSAGE.RESOURCE_NOT_FOUND);
       } else {
         const isPasswordMatched = bcrypt.compareSync(
           password,
@@ -161,7 +123,7 @@ module.exports = {
 
         if (!isPasswordMatched) {
           console.log('userLogin | Incorrect Password');
-          res.render('login', { errorMessage: MESSAGE.INVALID_LOGIN });
+          return errorResponse(res, 401, MESSAGE.UNAUTHORIZED);
         } else {
           await Users.findByIdAndUpdate(userData._id, {
             lastLogin: new Date(),
@@ -180,14 +142,17 @@ module.exports = {
             httpOnly: true,
           });
 
-          delete userData.password;
-
-          res.render('dashboard', { userData });
+          return successResponse(
+            res,
+            200,
+            MESSAGE.RESOURCE_RETRIEVED,
+            userData
+          );
         }
       }
     } catch (error) {
       console.log('userLogin | Internal Error =>', error);
-      res.render('login', { errorMessage: MESSAGE.SOMETHING_WENT_WRONG });
+      return errorResponse(res, 500, MESSAGE.SOMETHING_WENT_WRONG);
     }
   },
   userLogout: async (req, res) => {
@@ -195,18 +160,19 @@ module.exports = {
       expires: new Date(Date.now() - 2 * 1000),
       httpOnly: true,
     });
-    res.redirect('/');
+    return successResponse(res, 200, MESSAGE.RESOURCE_RETRIEVED, {}, 200);
   },
   changePassword: async (req, res) => {
     try {
       const { email, oldPassword, newPassword } = req.body;
-      const userData = await Users.findOne({ email, deleted: false }).lean();
+      const userData = await Users.findOne(
+        { email, deleted: false },
+        { password: 0 }
+      ).lean();
 
       if (!userData) {
         console.log('changePassword | User not found');
-        res.render('changePassword', {
-          errorMessage: MESSAGE.RESOURCE_NOT_FOUND,
-        });
+        return errorResponse(res, 404, MESSAGE.RESOURCE_NOT_FOUND);
       } else {
         const isPasswordMatched = bcrypt.compareSync(
           oldPassword,
@@ -215,158 +181,40 @@ module.exports = {
 
         if (!isPasswordMatched) {
           console.log('changePassword | Incorrect Old Password');
-          res.render('changePassword', {
-            errorMessage: MESSAGE.INVALID_LOGIN,
-          });
+          return errorResponse(res, 403, MESSAGE.INVALID_LOGIN);
         } else {
           const passwordHash = bcrypt.hashSync(newPassword, SALT_ROUNDS);
 
           await Users.findByIdAndUpdate(userData._id, {
             password: passwordHash,
           });
-          res.render('dashboard', {
-            alertMessage: MESSAGE.PASSWORD_UPDATED,
-          });
+          return successResponse(res, 200, MESSAGE.RESOURCE_UPDATED, userData);
         }
       }
     } catch (error) {
       console.log('changePassword | Internal Error =>', error);
-      res.render('changePassword', {
-        errorMessage: MESSAGE.SOMETHING_WENT_WRONG,
-      });
+      return errorResponse(res, 500, MESSAGE.SOMETHING_WENT_WRONG);
     }
   },
   resetPassword: async (req, res) => {
     try {
       const { email, password } = req.body;
-      const userData = await Users.findOne({ email, deleted: false });
+      const userData = await Users.findOne(
+        { email, deleted: false },
+        { password: 0 }
+      ).lean();
 
       if (!userData) {
         console.log('resetPassword | User not found');
-        res.render('resetPassword', {
-          errorMessage: MESSAGE.RESOURCE_NOT_FOUND,
-        });
+        return errorResponse(res, 404, MESSAGE.RESOURCE_NOT_FOUND);
       } else {
         const passwordHash = bcrypt.hashSync(password, SALT_ROUNDS);
         await Users.findByIdAndUpdate(userData._id, { password: passwordHash });
-        res.render('dashboard', {
-          alertMessage: MESSAGE.PASSWORD_UPDATED,
-        });
+        return successResponse(res, 200, MESSAGE.RESOURCE_UPDATED, userData);
       }
     } catch (error) {
       console.log('resetPassword | Internal Error =>', error);
-      res.render('resetPassword', {
-        errorMessage: MESSAGE.SOMETHING_WENT_WRONG,
-      });
-    }
-  },
-  getAllTickets: async (req, res) => {
-    try {
-      const { _id, role } = req.body;
-
-      const userExists = await Users.findById({ _id }).lean();
-      if (!userExists) {
-        console.log('getAllTickets | User not found');
-        res.render('viewTickets', { errorMessage: MESSAGE.RESOURCE_NOT_FOUND });
-      }
-
-      const ticketData = await fetchTicketsBasedOnRoles(userExists.role);
-      delete userExists.password;
-      res.render('viewTickets', { userData: userExists, ticketData });
-    } catch (error) {
-      console.log('getAllTickets | Internal Error =>', error);
-      res.render('createTicket', {
-        errorMessage: MESSAGE.SOMETHING_WENT_WRONG,
-      });
-    }
-  },
-  ticketCreation: async (req, res) => {
-    try {
-      const { title, description, images, videos, remarks } = req.body;
-      const generatedBy = req.user._id;
-
-      const userExists = await Users.findById({ _id: generatedBy });
-      if (!userExists) {
-        console.log('ticketCreation | User not found');
-        res.render('createTicket', {
-          errorMessage: MESSAGE.RESOURCE_NOT_FOUND,
-        });
-      }
-
-      if (req.user.role !== 'Client') {
-        console.log('ticketCreation', req.user.role, 'can not create tickets');
-        res.render('createTicket', { errorMessage: MESSAGE.UNAUTHORIZED });
-      }
-
-      const newTicket = await Tickets.create({
-        generatedBy,
-        content: { title, description, images, videos },
-        remarks,
-        status: 'Pending',
-        history: [],
-      });
-
-      const ticketData = await fetchTicketsBasedOnRoles(userExists.role);
-      res.render('viewTickets', { userData: req.user, ticketData });
-    } catch (error) {
-      console.log('ticketCreation | Internal Error =>', error);
-      res.render('createTicket', {
-        errorMessage: MESSAGE.SOMETHING_WENT_WRONG,
-      });
-    }
-  },
-  acceptTicket: async (req, res) => {
-    try {
-      const { id, remarks } = req.body;
-      const ticket = await Tickets.findById({ _id: id });
-      if (!ticket) {
-        console.log('acceptTicket | Ticket not found');
-        res.render('viewTickets', { errorMessage: MESSAGE.RESOURCE_NOT_FOUND });
-      } else {
-        const userData = await Users.findById({ _id: req.user._id }).lean();
-        if (!userData) {
-          console.log('acceptTicket | User not found');
-          res.render('viewTickets', {
-            errorMessage: MESSAGE.RESOURCE_NOT_FOUND,
-          });
-        } else {
-          ticket.status = getNewTicketStatus(userData.role, 'accept');
-          ticket.remarks = remarks;
-          await ticket.save();
-          const ticketData = await fetchTicketsBasedOnRoles(userData.role);
-          res.render('viewTickets', { userData: req.user, ticketData });
-        }
-      }
-    } catch (error) {
-      console.log('acceptTicket | Internal Error =>', error);
-      res.render('viewTickets', { errorMessage: MESSAGE.SOMETHING_WENT_WRONG });
-    }
-  },
-  rejectTicket: async (req, res) => {
-    try {
-      const { id, remarks } = req.body;
-      const ticket = await Tickets.findById({ _id: id });
-      if (!ticket) {
-        console.log('rejectTicket | Ticket not found');
-        res.render('viewTickets', { errorMessage: MESSAGE.RESOURCE_NOT_FOUND });
-      } else {
-        const userData = await Users.findById({ _id: req.user._id }).lean();
-        if (!userData) {
-          console.log('rejectTicket | User not found');
-          res.render('viewTickets', {
-            errorMessage: MESSAGE.RESOURCE_NOT_FOUND,
-          });
-        } else {
-          ticket.status = getNewTicketStatus(userData.role, 'reject');
-          ticket.remarks = remarks;
-          await ticket.save();
-          const ticketData = await fetchTicketsBasedOnRoles(userData.role);
-          res.render('viewTickets', { userData: req.user, ticketData });
-        }
-      }
-    } catch (error) {
-      console.log('rejectTicket | Internal Error =>', error);
-      res.render('viewTickets', { errorMessage: MESSAGE.SOMETHING_WENT_WRONG });
+      return errorResponse(res, 500, MESSAGE.SOMETHING_WENT_WRONG);
     }
   },
 };
