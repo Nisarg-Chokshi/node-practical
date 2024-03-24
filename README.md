@@ -1,21 +1,16 @@
-# Node Practical ToDo List
+## E-commerce Sales Analysis Demo
+
+<b>Objective:</b> Develop a sales analysis feature for an e-commerce platform using Node.js with Express and MongoDB. The feature aims to provide insights into sales data through various analytics queries.
 
 ### Requirements:
-- [ ] Create registration and login api with JWT and integrate it in form using template rendering
-- [ ] 4 user role - admin, manager, employee, client
-- [ ] Client can create tickets with text, images or video content.
-- [ ] Employee can add remarks to the ticket and send it to manager for approval
-- [ ] Manager can add remarks and approve or disapprove the ticket. If approved then the admin will be notified and admin can add his/her remarks and approve or disapprove the ticket.
-- [ ] If disapproved by manager then the employee need to make required changes in remarks and can submit the ticket again for approval.
-- [ ] If the ticket is disapproved by any role then it should be returned to the concerned role with the feedback. After making necessary changes the person can resubmit it.
-- [ ] If the ticket is approved by admin then the client will be notified for the same.
-- [ ] Admin should be able to view all the stages of the ticket.
-
-### Snapshots:
-![Client Dashboard](./public/assets/ClientDashboard.jpg "Client Dashboard")
-![Employee/Manager/Admin Dashboard](./public/assets/Dashboard.jpg "Employee/Manager/Admin Dashboard")
-![Create Ticket](./public/assets/CreateTicket.jpg "Create Ticket")
-![View Tickets](./public/assets/ViewTickets.jpg "View Tickets")
-![User Login](./public/assets/UserLogin.jpg "User Login")
-![User Registration](./public/assets/UserRegistration.jpg "User Registration")
-![Landing Page](./public/assets/LandingPage.jpg "Landing Page")
+- [x] Total Sales Revenue endpoint that calculates the total sales revenue
+generated from all transactions.
+- [x] Average Order Value endpoint that computes the average value of
+each order placed on the e-commerce platform.
+- [x] Top Selling Products endpoint that identifies the top-selling products
+based on the total quantity sold.
+- [x] List of All Sales that gets all the data from the Sales Collection and use
+Javascript to group the array of sales data datewise and product-wise.
+- [x] Implement error handling mechanisms in Express routes and MongoDB
+queries to handle edge cases and provide informative error messages.
+- [x] Validate input data to ensure consistency and integrity of the analytics results.
